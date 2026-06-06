@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日運勢測驗</title>
+    <!-- 引入流暢動畫庫 與 Canvas-Confetti 特效庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* 全局精緻文青風配色 */
+        :root {
+            --bg-color: #f7f3ee; /* 溫柔奶茶白 */
+            --primary-color: #cca496; /* 暮色粉金 */
+            --text-dark: #4a423e; /* 深焙茶色 */
+            --accent-red: #d96e6e; /* 慶典朱紅 */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "PingFang TC", "Noto Serif TC", "Microsoft JhengHei", serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 裝飾性背景圓圈 */
+        .bg-circle {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(244,223,216,0.6) 0%, rgba(247,243,238,0) 70%);
+            z-index: 1;
+            top: 15%;
+            pointer-events: none;
+        }
+
+        /* 主容器 */
+        .container {
+            text-align: center;
+            z-index: 2;
+            width: 90%;
+            max-width: 400px;
+            perspective: 1000px; /* 為翻牌動畫做準備 */
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 400;
+            letter-spacing: 4px;
+            margin-bottom: 2rem;
+            color: var(--text-dark);
+            opacity: 0.9;
+        }
+
+        /* 抽籤按鈕設計 */
+        .draw-btn {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            padding: 12px 35px;
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            border-radius: 50px;
+            letter-spacing: 2px;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(204, 164, 150, 0.2);
+            outline: none;
+        }
+
+        .draw-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 6px 20px rgba(204, 164, 150, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .draw-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 按鈕搖晃動畫 (模仿抽籤) */
+        .shake {
+            animation: shakeAnim 0.5s linear infinite;
+        }
+
+        @keyframes shakeAnim {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-3px, 1px) rotate(-3deg); }
+            40% { transform: translate(2px, -1px) rotate(3deg); }
+            60% { transform: translate(-2px, -1px) rotate(-2deg); }
+            80% { transform: translate(2px, 1px) rotate(2deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        /* 籤詩卡片基本樣式 */
+        .fortune-card {
+            background: #ffffff;
+            border: 1px solid rgba(204, 164, 150, 0.3);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 10px 30px rgba(74, 66, 62, 0.08);
+            display: none; /* 預設隱藏 */
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .fortune-card.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* 精緻雙線邊框 */
+        .card-inner {
+            border: 1px solid var(--primary-color);
+            padding: 2rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 大吉標籤 */
+        .fortune-title {
+            font-size: 2.5rem;
+            color: var(--accent-red);
+            font-weight: 700;
+            letter-spacing: 5px;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px double var(--accent-red);
+            padding-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(217, 110, 110, 0.2);
+        }
+
+        /* 日系直書排版 (這是精緻感的靈魂！) */
+        .fortune-poem {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            font-size: 1.2rem;
+            line-height: 2.2;
+            letter-spacing: 4px;
+            height: 220px; /* 固定高度讓直書排版好看 */
+            margin: 1rem 0;
+            color: #333;
+        }
+
+        /* 底部備註 */
+        .fortune-desc {
+            font-size: 0.85rem;
+            color: #8c827d;
+            margin-top: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        /* 重抽按鈕 */
+        .retry-btn {
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            text-decoration: underline;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .retry-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-circle"></div>
+
+    <div class="container">
+        <!-- 初始畫面 -->
+        <div id="action-zone">
+            <h1>測測妳今天的專屬運勢 ✨</h1>
+            <button class="draw-btn" id="drawBtn" onclick="drawFortune()">抽取今日運勢</button>
+        </div>
+
+        <!-- 籤詩卡片 -->
+        <div class="fortune-card" id="fortuneCard">
+            <div class="card-inner">
+                <div class="fortune-title">大大吉</div>
+                <div class="fortune-poem" id="poemText">
+                    <!-- 籤詩內容由 JS 動態帶入 -->
+                </div>
+                <div class="fortune-desc">✦ 宜：盡情大笑、接受寵愛、吃大餐</div>
+                <button class="retry-btn" onclick="resetFortune()">不滿足？再抽一次 ↩</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 五首「無論如何都是大吉」的客製化浪漫籤詩
+        const fortunes = [
+            "萬事皆宜遇良人\n歲歲年年伴此生\n今日有驚喜臨門\n所願皆能成",
+            "桃花滿天春風得意\n身邊有我始終如一\n今日運勢無可匹敵\n最幸運就是妳",
+            "才華洋溢貌美如仙\n注定快樂不只今天\n歲月溫柔吉星高照\n幸福在身邊",
+            "吉星高照步步生蓮\n平安喜樂常伴心田\n今天負責貌美如花\n大事我來扛",
+            "眉眼彎彎皆是笑意\n此生有幸與妳相遇\n今日運勢上上之籤\n宇宙最寵妳"
+        ];
+
+        const drawBtn = document.getElementById('drawBtn');
+        const actionZone = document.getElementById('action-zone');
+        const fortuneCard = document.getElementById('fortuneCard');
+        const poemText = document.getElementById('poemText');
+
+        function drawFortune() {
+            // 1. 觸發按鈕搖晃動畫，模擬抽籤
+            drawBtn.classList.add('shake');
+            drawBtn.innerText = '正在感應運勢中...';
+            drawBtn.disabled = true;
+
+            // 2. 延遲 1.2 秒（營造儀式感與期待感）
+            setTimeout(() => {
+                // 隨機選一首大吉籤詩
+                const randomIndex = Math.floor(Math.random() * fortunes.length);
+                // 將換行符 \n 轉換成網頁的換行標籤 <br>
+                poemText.innerHTML = fortunes[randomIndex].replace(/\n/g, '<br>');
+
+                // 隱藏按鈕區域，顯示籤詩
+                actionZone.style.display = 'none';
+                fortuneCard.style.display = 'block';
+                
+                // 稍微延遲讓 DOM 渲染後再加入 CSS Class 觸發淡入放大動畫
+                setTimeout(() => {
+                    fortuneCard.classList.add('show');
+                    // 3. 噴發粉色慶祝特效！
+                    celebrate();
+                }, 50);
+
+            }, 1200);
+        }
+
+        function resetFortune() {
+            // 重設狀態
+            fortuneCard.classList.remove('show');
+            setTimeout(() => {
+                fortuneCard.style.display = 'none';
+                actionZone.style.display = 'block';
+                drawBtn.classList.remove('shake');
+                drawBtn.innerText = '抽取今日運勢';
+                drawBtn.disabled = false;
+            }, 400);
+        }
+
+        // 噴發粉色系愛心與彩帶的特效函數
+        function celebrate() {
+            const count = 150;
+            const defaults = {
+                origin: { y: 0.6 },
+                colors: ['#cca496', '#d96e6e', '#f4dfd8', '#ffb3ba']
+            };
+
+            function fire(particleRatio, opts) {
+                confetti(Object.assign({}, defaults, opts, {
+                    particleCount: Math.floor(count * particleRatio)
+                }));
+            }
+
+            fire(0.25, { spread: 26, startVelocity: 55 });
+            fire(0.2, { spread: 60 });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+            fire(0.1, { spread: 120, startVelocity: 45 });
+        }
+    </script>
+</body>
+</html>
